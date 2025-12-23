@@ -1,0 +1,34 @@
+plugins {
+    id 'java'
+}
+
+group = 'org.example'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // SLF4J API
+    implementation 'org.slf4j:slf4j-api:2.0.16'
+    // Logback (実装体)
+    implementation 'ch.qos.logback:logback-classic:1.5.12'
+    // MongoDB Java Driver (Sync)
+    implementation 'org.mongodb:mongodb-driver-sync:5.2.1'
+    // MySQL Connector/J (X DevAPI 含む)
+    implementation  'com.mysql:mysql-connector-j:9.1.0'
+    // PostgreSQL JDBC ドライバ (2025年最新安定版 42.7.x 系)
+    implementation  'org.postgresql:postgresql:42.7.4'
+
+    // 以下はテスト用
+    testImplementation platform('org.junit:junit-bom:5.11.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.hamcrest:hamcrest:3.0'
+    // IntelliJ/Gradle でテストを正しく認識・実行するために必要
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}
