@@ -108,12 +108,10 @@ public class TestVarNodeRepository {
         data.addChild("password",   new ValueType.Str("derek1111"));
         data.addChild("name",       new ValueType.Str("DEREK"));
         VarNodeRepository<Long> repo = new VarNodeRepository<>(mySession, dbName, tableName, primaryKeyName);
-        mySession.commit();
         Long actual = null;
         actual = repo.insert(data);
         System.out.println("id is " + actual);
         Assertions.assertNotNull(actual);
-//        assertThat(actual, is(equalTo(expected)));
         assertThat(actual, is(greaterThan(0L)));
         id = actual;
     }
