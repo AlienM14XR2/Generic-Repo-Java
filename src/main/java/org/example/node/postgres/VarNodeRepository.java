@@ -6,6 +6,7 @@ import org.example.node.VarNode;
 import org.example.node.sql.SqlBuilder;
 
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -108,6 +109,48 @@ public class VarNodeRepository implements Repository<Long, VarNode> {
 
     @Override
     public Optional<VarNode> findById(Long id) {
-        return Optional.empty();
+        String sql = SqlBuilder.readQuery(tableName, primaryKeyName);
+        System.out.println("sql: " + sql);
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, id);
+            ResultSet rs = pstmt.executeQuery();
+            ResultSetMetaData rsmd = rs.getMetaData();
+            VarNode resultNode = new VarNode("result_node", new ValueType.None(), null);
+            if(rs.next()) {
+                // TODO ここは関数化すること。
+                for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+                    int type = rsmd.getColumnType(i);
+                    ValueType data = switch (type) {
+                        case Types.BIGINT, Types.INTEGER -> {
+                            long val = rs.getLong(i);
+                            yield rs.wasNull() ? new ValueType.None() : new ValueType.Int64(val);
+                        }
+                        case Types.DOUBLE, Types.FLOAT -> {
+                            double val = rs.getDouble(i);
+                            yield rs.wasNull() ? new ValueType.None() : new ValueType.Double(val);
+                        }
+                        case Types.VARCHAR, Types.CHAR -> {
+                            String val = rs.getString(i);
+                            yield (val == null) ? new ValueType.None() : new ValueType.Str(val);
+                        }
+                        case Types.BOOLEAN, Types.BIT -> {
+                            boolean val = rs.getBoolean(i);
+                            yield rs.wasNull() ? new ValueType.None() : new ValueType.Bool(val);
+                        }
+                        case Types.TIMESTAMP, Types.TIMESTAMP_WITH_TIMEZONE -> {
+                            LocalDateTime val = rs.getObject(i, LocalDateTime.class);
+                            yield (val == null) ? new ValueType.None() : new ValueType.DateTime(val);
+                        }
+                        default -> throw new IllegalStateException("Unexpected Type value: " + type);
+                    };
+                    resultNode.addChild(rsmd.getColumnLabel(i),data);
+                }
+                return Optional.of(resultNode);
+            } else {
+                return Optional.empty();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to find record with ID: " + id, e);
+        }
     }
 }

@@ -58,6 +58,19 @@ public class TestVarNodeRepository {
 
     @Test
     @Order(2)
+    void testFindById_postgres() throws Exception {
+        System.out.println("------ testFindById_postgres");
+        Repository<Long, VarNode> repo = new VarNodeRepository(conn, tableName, primaryKeyName);
+        Optional<VarNode> actual = repo.findById(id);
+        if(actual.isPresent()) {
+            VarNode.debug(actual.get(), 0);
+        } else {
+            throw new RuntimeException("Unexpected case.");
+        }
+    }
+
+    @Test
+    @Order(3)
     void testUpdate_postgres() throws Exception {
         System.out.println("------ testUpdate_postgres");
         String expectEmail = "updated_derek@loki.org";

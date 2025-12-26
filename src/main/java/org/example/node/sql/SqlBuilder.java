@@ -7,6 +7,14 @@ import java.util.StringJoiner;
 
 public class SqlBuilder {
 
+    public static String readQuery(final String tableName, final String primaryKeyName) {
+        // e.g. SELECT * FROM mytable WHERE columnfoo = ?
+        if (tableName == null || primaryKeyName == null) {
+            throw new IllegalArgumentException("Table name and Primary Key name must not be null.");
+        }
+        return String.format("SELECT * FROM \"%s\" WHERE \"%s\"=?", tableName, primaryKeyName);
+    }
+
     /**
      * VarNode の構造に基づき、パラメータ化された INSERT 文（SQLテンプレート）を生成する。
      * 仕様：テーブル名は関数の引数とする（C++ でもVarNode のルートは利用していない、特定の意味をもたせていない）。
