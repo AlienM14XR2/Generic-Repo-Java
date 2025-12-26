@@ -83,8 +83,22 @@ public class TestVarNodeRepository {
         data.addChild("roles",       new ValueType.Str("Admin,User"));
         Repository<Long, VarNode> repo = new VarNodeRepository(conn, tableName, primaryKeyName);
         repo.update(id, data);
-        // 検証... findがないと検証ができないか。
-//        Optional<VarNode> actual = repo.findById(id);
+        // 検証
+        Optional<VarNode> actual = repo.findById(id);
+        Assertions.assertTrue(actual.isPresent(), "レコードが存在しません");
+        actual.ifPresent(node -> {
+            VarNode.debug(node, 0); // 目視用
+            String actualEmail = node.getChild("email")
+                    .map(c -> c.get(String.class))
+                    .orElse(null);
+
+            String actualName = node.getChild("name")
+                    .map(c -> c.get(String.class))
+                    .orElse(null);
+
+            assertThat(actualEmail, is(expectEmail));
+            assertThat(actualName, is(expectName));
+        });
     }
 
     @Test
@@ -93,7 +107,7 @@ public class TestVarNodeRepository {
         System.out.println("------ testRemove_postgres");
         Repository<Long, VarNode> repo = new VarNodeRepository(conn, tableName, primaryKeyName);
         repo.remove(id);
-        // 検証... findがないと検証ができないか。
-//        Optional<VarNode> actual = repo.findById(id);
+        Optional<VarNode> actual = repo.findById(id);
+        Assertions.assertTrue(actual.isEmpty());
     }
 }
