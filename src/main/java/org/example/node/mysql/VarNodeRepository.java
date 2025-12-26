@@ -33,7 +33,6 @@ public class VarNodeRepository<ID> implements Repository<ID, VarNode> {
             Object sqlValue = switch (data) {
                 case ValueType.None none    -> null; // C++: mysqlx::Value() (NULL)
                 case ValueType.Int64 v      -> v.value();
-//                case ValueType.Float v      -> v.value();
                 case ValueType.Double v     -> v.value();
                 case ValueType.Bool v       -> v.value();
                 case ValueType.Str v        -> v.value();
@@ -93,7 +92,7 @@ public class VarNodeRepository<ID> implements Repository<ID, VarNode> {
         System.out.println("affected items count: "+res.getAffectedItemsCount());
 
         // オートインクリメント値を ID 型にキャストして返却
-        return (ID) (Long) res.getAutoIncrementValue();
+        return (ID) res.getAutoIncrementValue();
     }
 
     @Override
@@ -162,7 +161,6 @@ public class VarNodeRepository<ID> implements Repository<ID, VarNode> {
             // 行オブジェクトからインデックスで値を取得
             // Java X DevAPI では Object が返却される
             // C++: convertSqlValueToVarNode_Corrected
-//            ValueType variantValue = convertSqlValueToVarNode_Corrected(row, i);
             Type mysqlType = colMeta.getType();
             ValueType result = switch (mysqlType) {
                 case BIGINT, INT, SMALLINT, TINYINT ->
