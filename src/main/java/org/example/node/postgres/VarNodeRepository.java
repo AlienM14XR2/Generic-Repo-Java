@@ -107,6 +107,36 @@ public class VarNodeRepository implements Repository<Long, VarNode> {
         }
     }
 
+    private void mappedVarNodeByRS(VarNode resultNode, ResultSet rs, ResultSetMetaData rsmd) throws SQLException {
+        for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+            int type = rsmd.getColumnType(i);
+            ValueType data = switch (type) {
+                case Types.BIGINT, Types.INTEGER -> {
+                    long val = rs.getLong(i);
+                    yield rs.wasNull() ? new ValueType.None() : new ValueType.Int64(val);
+                }
+                case Types.DOUBLE, Types.FLOAT -> {
+                    double val = rs.getDouble(i);
+                    yield rs.wasNull() ? new ValueType.None() : new ValueType.Double(val);
+                }
+                case Types.VARCHAR, Types.CHAR -> {
+                    String val = rs.getString(i);
+                    yield (val == null) ? new ValueType.None() : new ValueType.Str(val);
+                }
+                case Types.BOOLEAN, Types.BIT -> {
+                    boolean val = rs.getBoolean(i);
+                    yield rs.wasNull() ? new ValueType.None() : new ValueType.Bool(val);
+                }
+                case Types.TIMESTAMP, Types.TIMESTAMP_WITH_TIMEZONE -> {
+                    LocalDateTime val = rs.getObject(i, LocalDateTime.class);
+                    yield (val == null) ? new ValueType.None() : new ValueType.DateTime(val);
+                }
+                default -> throw new IllegalStateException("Unexpected Type value: " + type);
+            };
+            resultNode.addChild(rsmd.getColumnLabel(i),data);
+        }
+    }
+
     @Override
     public Optional<VarNode> findById(Long id) {
         String sql = SqlBuilder.readQuery(tableName, primaryKeyName);
@@ -117,34 +147,7 @@ public class VarNodeRepository implements Repository<Long, VarNode> {
             ResultSetMetaData rsmd = rs.getMetaData();
             VarNode resultNode = new VarNode("result_node", new ValueType.None(), null);
             if(rs.next()) {
-                // TODO ここは関数化すること。
-                for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-                    int type = rsmd.getColumnType(i);
-                    ValueType data = switch (type) {
-                        case Types.BIGINT, Types.INTEGER -> {
-                            long val = rs.getLong(i);
-                            yield rs.wasNull() ? new ValueType.None() : new ValueType.Int64(val);
-                        }
-                        case Types.DOUBLE, Types.FLOAT -> {
-                            double val = rs.getDouble(i);
-                            yield rs.wasNull() ? new ValueType.None() : new ValueType.Double(val);
-                        }
-                        case Types.VARCHAR, Types.CHAR -> {
-                            String val = rs.getString(i);
-                            yield (val == null) ? new ValueType.None() : new ValueType.Str(val);
-                        }
-                        case Types.BOOLEAN, Types.BIT -> {
-                            boolean val = rs.getBoolean(i);
-                            yield rs.wasNull() ? new ValueType.None() : new ValueType.Bool(val);
-                        }
-                        case Types.TIMESTAMP, Types.TIMESTAMP_WITH_TIMEZONE -> {
-                            LocalDateTime val = rs.getObject(i, LocalDateTime.class);
-                            yield (val == null) ? new ValueType.None() : new ValueType.DateTime(val);
-                        }
-                        default -> throw new IllegalStateException("Unexpected Type value: " + type);
-                    };
-                    resultNode.addChild(rsmd.getColumnLabel(i),data);
-                }
+                mappedVarNodeByRS(resultNode, rs, rsmd);
                 return Optional.of(resultNode);
             } else {
                 return Optional.empty();
