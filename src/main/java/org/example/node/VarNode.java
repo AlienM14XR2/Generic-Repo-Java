@@ -19,6 +19,11 @@ public final class VarNode {
 
     // 子要素の追加
     public VarNode addChild(String key, ValueType data) {
+        Optional<VarNode> existing = getChild(key);
+        if (existing.isPresent()) {
+            existing.get().data = data;
+            return existing.get();
+        }
         VarNode child = new VarNode(key, data, this);
         this.children.add(child);
         return child;

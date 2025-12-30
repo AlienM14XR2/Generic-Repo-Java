@@ -1,4 +1,4 @@
-package org.exapmle.node.mysql;
+package org.example.node.mysql;
 
 
 import com.mysql.cj.xdevapi.Session;
