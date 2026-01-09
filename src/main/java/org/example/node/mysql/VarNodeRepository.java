@@ -5,8 +5,12 @@ import org.example.node.ValueType;
 import org.example.node.VarNode;
 import com.mysql.cj.xdevapi.*;
 
+import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Objects;
+
+import static com.mysql.cj.MysqlType.BLOB;
 
 /**
  * C++: class VarNodeRepository : public tmp::Repository<ID, tmp::VarNode>
@@ -37,6 +41,7 @@ public class VarNodeRepository<ID> implements Repository<ID, VarNode> {
                 case ValueType.Bool v       -> v.value();
                 case ValueType.Str v        -> v.value();
                 case ValueType.DateTime v   -> v.value(); // java.time.LocalDateTime
+                case ValueType.Binary v     -> v.value();
             };
             valuesToBind.add(sqlValue);
         }
@@ -120,6 +125,7 @@ public class VarNodeRepository<ID> implements Repository<ID, VarNode> {
                 case ValueType.Bool v     -> tableUpdate.set(child.getKey(), v.value());
                 case ValueType.Str v      -> tableUpdate.set(child.getKey(), v.value());
                 case ValueType.DateTime v -> tableUpdate.set(child.getKey(), v.value());
+                case ValueType.Binary v   -> tableUpdate.set(child.getKey(), v.value());
             };
         }
 
@@ -162,20 +168,36 @@ public class VarNodeRepository<ID> implements Repository<ID, VarNode> {
             // Java X DevAPI では Object が返却される
             // C++: convertSqlValueToVarNode_Corrected
             Type mysqlType = colMeta.getType();
+            // NULLチェック: row.getObject(i) が null なら型に関わらず None
+            // row.getObject(i) も row.getVariant(i) も存在しない。
+//            if (row.getObject(i).isNull()) {
+//                resultEntity.addChild(colName, new ValueType.None());
+//                continue;
+//            }
             ValueType result = switch (mysqlType) {
                 case BIGINT, INT, SMALLINT, TINYINT ->
                         new ValueType.Int64(row.getLong(i));
                 case FLOAT, DOUBLE, DECIMAL ->
                         new ValueType.Double(row.getDouble(i));
-                case STRING, JSON ->
-                        new ValueType.Str(row.getString(i));
-                case DATETIME, TIMESTAMP ->
+                case STRING, JSON -> {
+                    String val = row.getString(i);
+                    yield (val == null) ? new ValueType.None() : new ValueType.Str(row.getString(i));
+                }
+                case DATETIME, TIMESTAMP -> {
                     // Timestamp から LocalDateTime への変換が必要
                     // AI 推奨の次のメソッドは存在しない。
                     // new ValueType.DateTime(row.getLocalDateTime(i));
-                    new ValueType.DateTime(row.getTimestamp(i).toLocalDateTime());
-                case BIT ->
-                        new ValueType.Bool(row.getBoolean(i));
+                    Timestamp val = row.getTimestamp(i);
+                    yield (val == null) ? new ValueType.None() : new ValueType.DateTime(row.getTimestamp(i).toLocalDateTime());
+                }
+                case BIT -> {
+                    yield new ValueType.Bool(row.getBoolean(i));
+                }
+                case BYTES -> {
+                    // getString() で取得し、バイト列に変換する（ただし、データの欠落リスクがある）
+                    String val = row.getString(i);
+                    yield (val == null) ? new ValueType.None() : new ValueType.Binary(val.getBytes(StandardCharsets.UTF_8));
+                }
                 default ->
                         new ValueType.None();
             };

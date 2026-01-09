@@ -70,6 +70,7 @@ public final class VarNode {
             case ValueType.Bool   b     -> System.out.println("\tdata: " + b);
             case ValueType.Str    str   -> System.out.println("\tdata: " + str);
             case ValueType.DateTime dt  -> System.out.println("\tdata: " + dt);
+            case ValueType.Binary bin   -> System.out.println("\tdata: " + bin);
         };
         // sealed class のため、コンパイラが全てのケースが網羅されていることを確認できる
         for(VarNode child: varNode.children) {

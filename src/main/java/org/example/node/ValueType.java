@@ -8,4 +8,5 @@ public sealed interface ValueType {
     record Bool(boolean value) implements ValueType {}
     record Str(String value) implements ValueType {}
     record DateTime(LocalDateTime value) implements ValueType {}
+    record Binary(byte[] value) implements ValueType {}
 }

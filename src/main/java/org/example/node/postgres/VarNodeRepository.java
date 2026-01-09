@@ -27,6 +27,7 @@ public class VarNodeRepository implements Repository<Long, VarNode> {
                 case ValueType.Bool v       -> pstmt.setBoolean(i, v.value());
                 case ValueType.Str v        -> pstmt.setString(i, v.value());
                 case ValueType.DateTime v   -> pstmt.setObject(i, v.value()); // JDBC 4.2+ (LocalDateTime)
+                case ValueType.Binary v     -> pstmt.setBytes(i, v.value());
             }
             ++i;
         }
@@ -130,6 +131,10 @@ public class VarNodeRepository implements Repository<Long, VarNode> {
                 case Types.TIMESTAMP, Types.TIMESTAMP_WITH_TIMEZONE -> {
                     LocalDateTime val = rs.getObject(i, LocalDateTime.class);
                     yield (val == null) ? new ValueType.None() : new ValueType.DateTime(val);
+                }
+                case Types.BINARY, Types.VARBINARY, Types.BLOB -> {
+                    byte[] val = rs.getBytes(i);
+                    yield (val == null) ? new ValueType.None() : new ValueType.Binary(val);
                 }
                 default -> throw new IllegalStateException("Unexpected Type value: " + type);
             };

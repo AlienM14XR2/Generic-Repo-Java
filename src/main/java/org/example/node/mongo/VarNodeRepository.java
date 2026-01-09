@@ -39,6 +39,7 @@ public class VarNodeRepository implements Repository<String, VarNode> {
                 case ValueType.Bool v       -> v.value();
                 case ValueType.Str v        -> v.value();
                 case ValueType.DateTime v   -> v.value(); // java.time.LocalDateTime
+                case ValueType.Binary v     -> v.value();
             };
             doc.append(child.getKey(), value);
         }
@@ -97,6 +98,7 @@ public class VarNodeRepository implements Repository<String, VarNode> {
             case ValueType.Bool v       -> v.value();
             case ValueType.Str v        -> v.value();
             case ValueType.DateTime v   -> v.value(); // java.time.LocalDateTime
+            case ValueType.Binary v     -> v.value();
         };
         return Updates.set(child.getKey(), value);
     }

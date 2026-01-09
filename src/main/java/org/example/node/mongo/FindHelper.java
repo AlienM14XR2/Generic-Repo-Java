@@ -1,6 +1,7 @@
 package org.example.node.mongo;
 
 import org.bson.Document;
+import org.bson.types.Binary;
 import org.example.node.ValueType;
 import org.example.node.VarNode;
 
@@ -46,6 +47,10 @@ public class FindHelper {
                     if(doc.get(child.getKey(), LocalDateTime.class) != null) resultNode.addChild(child.getKey(), new ValueType.DateTime(doc.get(child.getKey(), LocalDateTime.class)));
                     else resultNode.addChild(child.getKey(), new ValueType.None());
                 } // java.time.LocalDateTime
+                case ValueType.Binary v -> {
+                    if(doc.get(child.getKey(), Binary.class) != null) resultNode.addChild(child.getKey(), new ValueType.Binary(doc.get(child.getKey(), Binary.class).getData()));
+                    else resultNode.addChild(child.getKey(), new ValueType.None());
+                }
             };
         }
         return resultNode;
