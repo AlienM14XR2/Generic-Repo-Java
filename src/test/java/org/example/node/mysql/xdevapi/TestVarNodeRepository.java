@@ -1,11 +1,10 @@
-package org.example.node.mysql;
+package org.example.node.mysql.xdevapi;
 
 
 import com.mysql.cj.xdevapi.Session;
 import com.mysql.cj.xdevapi.SessionFactory;
 import org.example.node.ValueType;
 import org.example.node.VarNode;
-import org.example.node.mysql.VarNodeRepository;
 import org.junit.jupiter.api.*;
 
 import java.util.Optional;

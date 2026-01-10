@@ -1,4 +1,4 @@
-package org.example.node.mysql;
+package org.example.node.mysql.xdevapi;
 
 import org.example.node.Repository;
 import org.example.node.ValueType;
@@ -9,8 +9,6 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Objects;
-
-import static com.mysql.cj.MysqlType.BLOB;
 
 /**
  * C++: class VarNodeRepository : public tmp::Repository<ID, tmp::VarNode>
