@@ -7,7 +7,7 @@ version = '1.0-SNAPSHOT'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(24)
     }
 }
 
@@ -35,6 +35,15 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+//tasks.withType(JavaExec) {
+//    // ネイティブアクセスを許可
+//    jvmArgs << '--enable-native-access=ALL-UNNAMED'
+//    // .so があるディレクトリを指定（絶対パスが確実です）
+//    systemProperty "java.library.path", file("/home/jack/dev2/Paradise-Lost/C++/2025/generic_repo_cxx/build")
+//}
+
 test {
     useJUnitPlatform()
+    // テスト実行時も同様の許可が必要
+//    jvmArgs << '--enable-native-access=ALL-UNNAMED'
 }
