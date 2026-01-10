@@ -3,6 +3,8 @@ package org.example.node.postgres;
 import org.example.node.Repository;
 import org.example.node.ValueType;
 import org.example.node.VarNode;
+import org.example.node.jdbc.VarNodeRepository;
+import org.example.node.sql.dialect.PostgresStrategy;
 import org.junit.jupiter.api.*;
 
 import java.sql.Connection;
@@ -48,7 +50,7 @@ public class TestVarNodeRepository {
         data.addChild("email",      new ValueType.Str("derek@loki.org"));
         data.addChild("password",   new ValueType.Str("derek1111"));
         data.addChild("name",       new ValueType.Str("DEREK"));
-        Repository<Long, VarNode> repo = new VarNodeRepository(conn, tableName);
+        Repository<Long, VarNode> repo = new VarNodeRepository(conn, tableName, new PostgresStrategy());
         Long actual = null;
         actual = repo.insert(data);
         Assertions.assertNotNull(actual);
@@ -60,7 +62,7 @@ public class TestVarNodeRepository {
     @Order(2)
     void testFindById_postgres() throws Exception {
         System.out.println("------ testFindById_postgres");
-        Repository<Long, VarNode> repo = new VarNodeRepository(conn, tableName, primaryKeyName);
+        Repository<Long, VarNode> repo = new VarNodeRepository(conn, tableName, primaryKeyName, new PostgresStrategy());
         Optional<VarNode> actual = repo.findById(id);
         if(actual.isPresent()) {
             VarNode.debug(actual.get(), 0);
@@ -81,7 +83,7 @@ public class TestVarNodeRepository {
         data.addChild("password",   new ValueType.Str("derek1111_u"));
         data.addChild("name",       new ValueType.Str(expectName));
         data.addChild("roles",       new ValueType.Str("Admin,User"));
-        Repository<Long, VarNode> repo = new VarNodeRepository(conn, tableName, primaryKeyName);
+        Repository<Long, VarNode> repo = new VarNodeRepository(conn, tableName, primaryKeyName, new PostgresStrategy());
         repo.update(id, data);
         // 検証
         Optional<VarNode> actual = repo.findById(id);
@@ -105,7 +107,7 @@ public class TestVarNodeRepository {
     @Order(4)
     void testRemove_postgres() throws Exception {
         System.out.println("------ testRemove_postgres");
-        Repository<Long, VarNode> repo = new VarNodeRepository(conn, tableName, primaryKeyName);
+        Repository<Long, VarNode> repo = new VarNodeRepository(conn, tableName, primaryKeyName, new PostgresStrategy());
         repo.remove(id);
         Optional<VarNode> actual = repo.findById(id);
         Assertions.assertTrue(actual.isEmpty());

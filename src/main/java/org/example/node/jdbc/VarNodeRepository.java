@@ -1,9 +1,10 @@
-package org.example.node.postgres;
+package org.example.node.jdbc;
 
 import org.example.node.Repository;
 import org.example.node.ValueType;
 import org.example.node.VarNode;
 import org.example.node.sql.SqlBuilder;
+import org.example.node.sql.dialect.JdbcStrategy;
 
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ public class VarNodeRepository implements Repository<Long, VarNode> {
     private final Connection conn;
     private final String tableName;
     private final String primaryKeyName;
+    private final JdbcStrategy jdbcStrategy;
 
     private int setPreparedStatement(PreparedStatement pstmt, VarNode varNode) throws SQLException {
         int i = 1;
@@ -34,33 +36,33 @@ public class VarNodeRepository implements Repository<Long, VarNode> {
         return i;
     }
 
-    /**
-     * コンストラクタ
-     *
-     */
-    VarNodeRepository(
+    public VarNodeRepository(
             Connection conn,
-            String tableName
+            String tableName,
+            JdbcStrategy jdbcStrategy
     ) {
         this.conn = Objects.requireNonNull(conn);
         this.tableName = Objects.requireNonNull(tableName);
+        this.jdbcStrategy = Objects.requireNonNull(jdbcStrategy);
         this.primaryKeyName = null;
     }
 
-    VarNodeRepository(
+    public VarNodeRepository(
             Connection conn,
             String tableName,
-            String primaryKeyName
+            String primaryKeyName,
+            JdbcStrategy jdbcStrategy
     ) {
         this.conn = Objects.requireNonNull(conn);
         this.tableName = Objects.requireNonNull(tableName);
         this.primaryKeyName = Objects.requireNonNull(primaryKeyName);
+        this.jdbcStrategy = Objects.requireNonNull(jdbcStrategy);
     }
 
     @Override
     public Long insert(VarNode varNode) {
         // DONE... VarNode を利用したSQL の動的作成
-        String sql = SqlBuilder.insertQuery(tableName, varNode);
+        String sql = jdbcStrategy.insertQuery(tableName, varNode);
         System.out.println("sql: "+sql);
         try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             // DONE... VarNode を利用したPreparedStatement の設定
@@ -82,7 +84,7 @@ public class VarNodeRepository implements Repository<Long, VarNode> {
 
     @Override
     public void update(Long id, VarNode varNode) {
-        String sql = SqlBuilder.updateQuery(tableName, primaryKeyName, varNode);
+        String sql = jdbcStrategy.updateQuery(tableName, primaryKeyName, varNode);
         System.out.println("sql: "+sql);
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             // DONE... VarNode を利用したPreparedStatement の設定
@@ -97,7 +99,7 @@ public class VarNodeRepository implements Repository<Long, VarNode> {
 
     @Override
     public void remove(Long id) {
-        final String sql = SqlBuilder.deleteQuery(tableName, primaryKeyName);
+        final String sql = jdbcStrategy.deleteQuery(tableName, primaryKeyName);
         System.out.println("sql: " + sql);
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setLong(1, id);
@@ -144,7 +146,7 @@ public class VarNodeRepository implements Repository<Long, VarNode> {
 
     @Override
     public Optional<VarNode> findById(Long id) {
-        String sql = SqlBuilder.readQuery(tableName, primaryKeyName);
+        String sql = jdbcStrategy.readQuery(tableName, primaryKeyName);
         System.out.println("sql: " + sql);
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setLong(1, id);
