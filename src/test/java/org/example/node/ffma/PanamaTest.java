@@ -59,7 +59,17 @@ public class PanamaTest {
 
         MethodHandle addChildBinary = linker.downcallHandle(
                 lib.find("add_child_binary").orElseThrow(),
-                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
+                FunctionDescriptor.ofVoid(
+                        ValueLayout.ADDRESS,   // node_ptr
+                        ValueLayout.ADDRESS,   // key
+                        ValueLayout.ADDRESS,   // data (byte*)
+                        ValueLayout.JAVA_LONG  // data_len (size_t)
+                )
+        );
+
+        MethodHandle createSessionMysql = linker.downcallHandle(
+                lib.find("create_session_mysql").orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
         );
 
         MethodHandle debugNode = linker.downcallHandle(
@@ -72,11 +82,31 @@ public class PanamaTest {
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
         );
 
+        MethodHandle destroySessionMySQL = linker.downcallHandle(
+                lib.find("destroy_session_mysql").orElseThrow(),
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
+        );
+
+        MethodHandle insertVarnodeMysql = linker.downcallHandle(
+                lib.find("insert_varnode_mysql").orElseThrow(),
+                FunctionDescriptor.of(
+                        ValueLayout.JAVA_LONG, // 戻り値: int64_t
+                        ValueLayout.ADDRESS,   // 第1引数: void* session_ptr
+                        ValueLayout.ADDRESS,   // 第2引数: void* node_ptr
+                        ValueLayout.ADDRESS,   // 第3引数: const char* dbName
+                        ValueLayout.ADDRESS    // 第4引数: const char* tableName
+                )
+        );
+
         try (Arena arena = Arena.ofConfined()) {
             // 2. C++ インスタンスの生成 (create_varnode("root"))
             MemorySegment rootKey = arena.allocateFrom("root");
             MemorySegment nodePtr = (MemorySegment) createNode.invokeExact(rootKey);
-
+            MemorySegment host = arena.allocateFrom("localhost");
+            int port = 33060;
+            MemorySegment user = arena.allocateFrom("root");
+            MemorySegment pass = arena.allocateFrom("root1234");
+            MemorySegment session = (MemorySegment) createSessionMysql.invokeExact(host,port,user,pass);
             // 3. 子要素の追加 (add_child_str(nodePtr, "status", "success"))
             addChildStr.invokeExact(nodePtr, arena.allocateFrom("email"), arena.allocateFrom("derek@loki.org"));
             addChildStr.invokeExact(nodePtr, arena.allocateFrom("memo"), arena.allocateFrom("baseball player"));
@@ -85,15 +115,32 @@ public class PanamaTest {
             addChildFloat.invoke(nodePtr, arena.allocateFrom("col_float"), 3.14F);
             addChildDouble.invoke(nodePtr, arena.allocateFrom("col_double"), 35.6809591);
             byte[] bin = {'a', '1', 'b', '2'};
-            addChildBinary.invoke(nodePtr, arena.allocateFrom("raw_data"), arena.allocateFrom(Arrays.toString(bin)));
+            // byte配列を直接メモリセグメントに割り当て
+            MemorySegment binSegment = arena.allocateFrom(ValueLayout.JAVA_BYTE, bin);
+            // データ本体のポインタと、そのサイズ (bin.length) を渡す
+            addChildBinary.invokeExact(
+                    nodePtr,
+                    arena.allocateFrom("raw_data"),
+                    binSegment,
+                    (long) bin.length
+            );
 
             // 4. C++ 側のデバッグ出力を実行
             System.out.println("--- C++ Debug Output Start ---");
             debugNode.invokeExact(nodePtr);
             System.out.println("--- C++ Debug Output End ---");
 
-            // 5. 解放
+            // 5. Insert 実行
+            long insertedId = (long) insertVarnodeMysql.invokeExact(
+                    session,                       // すでに生成済みの session ポインタ
+                    nodePtr,                       // すでに生成済みの node ポインタ
+                    arena.allocateFrom("test"), // dbName
+                    arena.allocateFrom("fulltype") // tableName
+            );
+            System.out.println("insertId: "+insertedId);
+            // 6. 解放
             destroyNode.invokeExact(nodePtr);
+            destroySessionMySQL.invokeExact(session);
         }
     }
 }
