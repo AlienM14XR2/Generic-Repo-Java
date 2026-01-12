@@ -3,6 +3,7 @@ package org.example.node.ffma;
 import java.lang.foreign.*;
 import java.lang.invoke.MethodHandle;
 import java.nio.file.Path;
+import java.util.Arrays;
 
 /**
  * 「Foreign Function & Memory API (Project Panama)」の活用
@@ -41,6 +42,26 @@ public class PanamaTest {
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG)
         );
 
+        MethodHandle addChildBool = linker.downcallHandle(
+                lib.find("add_child_bool").orElseThrow(),
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_BOOLEAN)
+        );
+
+        MethodHandle addChildFloat = linker.downcallHandle(
+                lib.find("add_child_float").orElseThrow(),
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_FLOAT)
+        );
+
+        MethodHandle addChildDouble = linker.downcallHandle(
+                lib.find("add_child_double").orElseThrow(),
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_DOUBLE)
+        );
+
+        MethodHandle addChildBinary = linker.downcallHandle(
+                lib.find("add_child_binary").orElseThrow(),
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
+        );
+
         MethodHandle debugNode = linker.downcallHandle(
                 lib.find("debug_varnode").orElseThrow(),
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
@@ -57,8 +78,14 @@ public class PanamaTest {
             MemorySegment nodePtr = (MemorySegment) createNode.invokeExact(rootKey);
 
             // 3. 子要素の追加 (add_child_str(nodePtr, "status", "success"))
-            addChildStr.invokeExact(nodePtr, arena.allocateFrom("status"), arena.allocateFrom("success"));
-            addChildInt64t.invoke(nodePtr, arena.allocateFrom("id"), 3L);
+            addChildStr.invokeExact(nodePtr, arena.allocateFrom("email"), arena.allocateFrom("derek@loki.org"));
+            addChildStr.invokeExact(nodePtr, arena.allocateFrom("memo"), arena.allocateFrom("baseball player"));
+            addChildInt64t.invoke(nodePtr, arena.allocateFrom("age"), 30L);
+            addChildBool.invoke(nodePtr, arena.allocateFrom("on_busy"), Boolean.TRUE);
+            addChildFloat.invoke(nodePtr, arena.allocateFrom("col_float"), 3.14F);
+            addChildDouble.invoke(nodePtr, arena.allocateFrom("col_double"), 35.6809591);
+            byte[] bin = {'a', '1', 'b', '2'};
+            addChildBinary.invoke(nodePtr, arena.allocateFrom("raw_data"), arena.allocateFrom(Arrays.toString(bin)));
 
             // 4. C++ 側のデバッグ出力を実行
             System.out.println("--- C++ Debug Output Start ---");
