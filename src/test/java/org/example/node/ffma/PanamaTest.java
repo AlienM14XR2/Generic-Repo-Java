@@ -36,6 +36,11 @@ public class PanamaTest {
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS)
         );
 
+        MethodHandle addChildInt64t = linker.downcallHandle(
+                lib.find("add_child_int64_t").orElseThrow(),
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG)
+        );
+
         MethodHandle debugNode = linker.downcallHandle(
                 lib.find("debug_varnode").orElseThrow(),
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
@@ -53,6 +58,7 @@ public class PanamaTest {
 
             // 3. 子要素の追加 (add_child_str(nodePtr, "status", "success"))
             addChildStr.invokeExact(nodePtr, arena.allocateFrom("status"), arena.allocateFrom("success"));
+            addChildInt64t.invoke(nodePtr, arena.allocateFrom("id"), 3L);
 
             // 4. C++ 側のデバッグ出力を実行
             System.out.println("--- C++ Debug Output Start ---");
