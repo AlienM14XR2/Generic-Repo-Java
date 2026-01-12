@@ -22,6 +22,9 @@ import java.util.Arrays;
 public class PanamaTest {
     private static final String varnodeBridgeModulePath = "/home/jack/dev2/Paradise-Lost/C++/2025/generic_repo_cxx/build/libvarnode_bridge.so";
     public static void main(String[] args) throws Throwable {
+        // 計測開始 (ナノ秒精度)
+        long startTime = System.nanoTime();
+
         Linker linker = Linker.nativeLinker();
         // ビルドした .so ファイルをロード
         SymbolLookup lib = SymbolLookup.libraryLookup(Path.of(varnodeBridgeModulePath), Arena.global());
@@ -130,6 +133,7 @@ public class PanamaTest {
             debugNode.invokeExact(nodePtr);
             System.out.println("--- C++ Debug Output End ---");
 
+            long endTime1 = System.nanoTime();
             // 5. Insert 実行
             long insertedId = (long) insertVarnodeMysql.invokeExact(
                     session,                       // すでに生成済みの session ポインタ
@@ -138,6 +142,13 @@ public class PanamaTest {
                     arena.allocateFrom("fulltype") // tableName
             );
             System.out.println("insertId: "+insertedId);
+            long endTime2 = System.nanoTime();
+            // 秒単位に変換して出力 (C++側の CLOCKS_PER_SEC と比較用)
+            double durationIns = (endTime2 - endTime1) / 1_000_000_000.0;
+            double durationAll = (endTime2 - startTime) / 1_000_000_000.0;
+            System.out.printf("Java (FFM API) insertId: %d, passed %.6f sec.%n", insertedId, durationIns);
+            System.out.printf("Java (FFM API) insertId: %d, passed %.6f sec.%n", insertedId, durationAll);
+
             // 6. 解放
             destroyNode.invokeExact(nodePtr);
             destroySessionMySQL.invokeExact(session);
