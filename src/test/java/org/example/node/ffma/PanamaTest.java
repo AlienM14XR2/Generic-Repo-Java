@@ -2,6 +2,8 @@ package org.example.node.ffma;
 
 import java.lang.foreign.*;
 import java.lang.invoke.MethodHandle;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Arrays;
 
@@ -122,6 +124,30 @@ public class PanamaTest {
                 )
         );
 
+        MethodHandle findVarnodeMysql = linker.downcallHandle(
+                lib.find("find_varnode_mysql").orElseThrow(),
+                FunctionDescriptor.of(
+                        ValueLayout.ADDRESS,   // 戻り値: void*
+                        ValueLayout.ADDRESS,   // 第1引数: void* session_ptr
+                        ValueLayout.JAVA_LONG, // 第2引数: int64_t
+                        ValueLayout.ADDRESS,   // 第3引数: const char* dbName
+                        ValueLayout.ADDRESS    // 第4引数: const char* tableName
+                )
+        );
+
+        MethodHandle findResultSize = linker.downcallHandle(
+                lib.find("find_result_size").orElseThrow(),
+                FunctionDescriptor.of(
+                        ValueLayout.JAVA_LONG, // 戻り値: size_t
+                        ValueLayout.ADDRESS    // 第1引数: void* str_ptr
+                )
+        );
+
+        MethodHandle destroyString = linker.downcallHandle(
+                lib.find("destroy_string").orElseThrow(),
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
+        );
+
         try (Arena arena = Arena.ofConfined()) {
             // 2. C++ インスタンスの生成 (create_varnode("root"))
             MemorySegment rootKey = arena.allocateFrom("root");
@@ -178,6 +204,18 @@ public class PanamaTest {
             );
             long endTime4 = System.nanoTime();
             // 7. Find 実行
+            MemorySegment findResult = (MemorySegment)findVarnodeMysql.invokeExact(
+                    session,
+                    insertedId,
+                    arena.allocateFrom("test"),
+                    arena.allocateFrom("fulltype")
+            );
+            long resultSize = (long)findResultSize.invokeExact(findResult);
+            System.out.println("resultSize: "+resultSize);
+            MemorySegment sizedSegment = findResult.reinterpret(resultSize+1);
+            System.out.println("sizedSegment: "+sizedSegment.getString(0L, StandardCharsets.UTF_8));
+            long endTime5 = System.nanoTime();
+
             // 8. Remove 実行
             removeVarnodeMysql.invokeExact(
                     session,
@@ -185,16 +223,21 @@ public class PanamaTest {
                     arena.allocateFrom("test"),
                     arena.allocateFrom("fulltype")
             );
-            long endTime5 = System.nanoTime();
+            long endTime6 = System.nanoTime();
             // 秒単位に変換して出力 (C++側の CLOCKS_PER_SEC と比較用)
             double durationIns = (endTime2 - endTime1) / 1_000_000_000.0;
             double durationUpd = (endTime4 - endTime3) / 1_000_000_000.0;
-            double durationAll = (endTime5 - startTime) / 1_000_000_000.0;
+            double durationFin = (endTime5 - endTime4) / 1_000_000_000.0;
+            double durationDel = (endTime6 - endTime5) / 1_000_000_000.0;
+            double durationAll = (endTime6 - startTime) / 1_000_000_000.0;
             System.out.printf("Java (FFM API) insertId: %d, passed %.6f sec.%n", insertedId, durationIns);
             System.out.printf("Java (FFM API) updateId: %d, passed %.6f sec.%n", insertedId, durationUpd);
-            System.out.printf("Java (FFM API) insertId: %d, passed %.6f sec.%n", insertedId, durationAll);
+            System.out.printf("Java (FFM API) findId:   %d, passed %.6f sec.%n", insertedId, durationFin);
+            System.out.printf("Java (FFM API) removeId: %d, passed %.6f sec.%n", insertedId, durationDel);
+            System.out.printf("Java (FFM API)               passed %.6f sec.%n", durationAll);
 
             // 9. 解放
+            destroyString.invokeExact(findResult);
             destroyNode.invokeExact(nodePtr);
             destroySessionMySQL.invokeExact(session);
         }
