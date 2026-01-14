@@ -111,6 +111,17 @@ public class PanamaTest {
                 )
         );
 
+        MethodHandle updateVarnodeMysql = linker.downcallHandle(
+                lib.find("update_varnode_mysql").orElseThrow(),
+                FunctionDescriptor.ofVoid(
+                        ValueLayout.ADDRESS,   // 第1引数: void* session_ptr
+                        ValueLayout.ADDRESS,   // 第2引数: void* node_ptr
+                        ValueLayout.JAVA_LONG, // 第3引数: int64_t
+                        ValueLayout.ADDRESS,   // 第4引数: const char* dbName
+                        ValueLayout.ADDRESS    // 第5引数: const char* tableName
+                )
+        );
+
         try (Arena arena = Arena.ofConfined()) {
             // 2. C++ インスタンスの生成 (create_varnode("root"))
             MemorySegment rootKey = arena.allocateFrom("root");
@@ -154,6 +165,18 @@ public class PanamaTest {
             long endTime2 = System.nanoTime();
             System.out.println("insertId: "+insertedId);
             // 6. Update 実行
+            long endTime3 = System.nanoTime();
+            addChildStr.invokeExact(nodePtr, arena.allocateFrom("email"), arena.allocateFrom("derek_update@loki.org"));
+            addChildStr.invokeExact(nodePtr, arena.allocateFrom("memo"), arena.allocateFrom("football player, PG"));
+            addChildInt64t.invoke(nodePtr, arena.allocateFrom("age"), 33L);
+            updateVarnodeMysql.invokeExact(
+                    session,
+                    nodePtr,
+                    insertedId,
+                    arena.allocateFrom("test"),
+                    arena.allocateFrom("fulltype")
+            );
+            long endTime4 = System.nanoTime();
             // 7. Find 実行
             // 8. Remove 実行
             removeVarnodeMysql.invokeExact(
@@ -162,10 +185,13 @@ public class PanamaTest {
                     arena.allocateFrom("test"),
                     arena.allocateFrom("fulltype")
             );
+            long endTime5 = System.nanoTime();
             // 秒単位に変換して出力 (C++側の CLOCKS_PER_SEC と比較用)
             double durationIns = (endTime2 - endTime1) / 1_000_000_000.0;
-            double durationAll = (endTime2 - startTime) / 1_000_000_000.0;
+            double durationUpd = (endTime4 - endTime3) / 1_000_000_000.0;
+            double durationAll = (endTime5 - startTime) / 1_000_000_000.0;
             System.out.printf("Java (FFM API) insertId: %d, passed %.6f sec.%n", insertedId, durationIns);
+            System.out.printf("Java (FFM API) updateId: %d, passed %.6f sec.%n", insertedId, durationUpd);
             System.out.printf("Java (FFM API) insertId: %d, passed %.6f sec.%n", insertedId, durationAll);
 
             // 9. 解放
