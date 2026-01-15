@@ -135,8 +135,8 @@ public class PanamaTest {
                 )
         );
 
-        MethodHandle findResultSize = linker.downcallHandle(
-                lib.find("find_result_size").orElseThrow(),
+        MethodHandle cstrSize = linker.downcallHandle(
+                lib.find("cstr_size").orElseThrow(),
                 FunctionDescriptor.of(
                         ValueLayout.JAVA_LONG, // 戻り値: size_t
                         ValueLayout.ADDRESS    // 第1引数: void* str_ptr
@@ -146,6 +146,14 @@ public class PanamaTest {
         MethodHandle destroyString = linker.downcallHandle(
                 lib.find("destroy_string").orElseThrow(),
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
+        );
+
+        MethodHandle getCStr = linker.downcallHandle(
+                lib.find("get_cstr").orElseThrow(),
+                FunctionDescriptor.of(
+                        ValueLayout.ADDRESS,    // 戻値: const char*
+                        ValueLayout.ADDRESS     // 第1引数: void* str_ptr
+                )
         );
 
         try (Arena arena = Arena.ofConfined()) {
@@ -210,9 +218,10 @@ public class PanamaTest {
                     arena.allocateFrom("test"),
                     arena.allocateFrom("fulltype")
             );
-            long resultSize = (long)findResultSize.invokeExact(findResult);
+            MemorySegment cstr = (MemorySegment)getCStr.invokeExact(findResult);
+            long resultSize = (long)cstrSize.invokeExact(cstr);
             System.out.println("resultSize: "+resultSize);
-            MemorySegment sizedSegment = findResult.reinterpret(resultSize+1);
+            MemorySegment sizedSegment = cstr.reinterpret(resultSize+1);
             System.out.println("sizedSegment: "+sizedSegment.getString(0L, StandardCharsets.UTF_8));
             long endTime5 = System.nanoTime();
 
@@ -224,22 +233,23 @@ public class PanamaTest {
                     arena.allocateFrom("fulltype")
             );
             long endTime6 = System.nanoTime();
-            // 秒単位に変換して出力 (C++側の CLOCKS_PER_SEC と比較用)
-            double durationIns = (endTime2 - endTime1) / 1_000_000_000.0;
-            double durationUpd = (endTime4 - endTime3) / 1_000_000_000.0;
-            double durationFin = (endTime5 - endTime4) / 1_000_000_000.0;
-            double durationDel = (endTime6 - endTime5) / 1_000_000_000.0;
-            double durationAll = (endTime6 - startTime) / 1_000_000_000.0;
-            System.out.printf("Java (FFM API) insertId: %d, passed %.6f sec.%n", insertedId, durationIns);
-            System.out.printf("Java (FFM API) updateId: %d, passed %.6f sec.%n", insertedId, durationUpd);
-            System.out.printf("Java (FFM API) findId:   %d, passed %.6f sec.%n", insertedId, durationFin);
-            System.out.printf("Java (FFM API) removeId: %d, passed %.6f sec.%n", insertedId, durationDel);
-            System.out.printf("Java (FFM API)               passed %.6f sec.%n", durationAll);
 
             // 9. 解放
             destroyString.invokeExact(findResult);
             destroyNode.invokeExact(nodePtr);
             destroySessionMySQL.invokeExact(session);
+            long endTime7 = System.nanoTime();
+            // 秒単位に変換して出力 (C++側の CLOCKS_PER_SEC と比較用)
+            double durationIns = (endTime2 - endTime1) / 1_000_000_000.0;
+            double durationUpd = (endTime4 - endTime3) / 1_000_000_000.0;
+            double durationFin = (endTime5 - endTime4) / 1_000_000_000.0;
+            double durationDel = (endTime6 - endTime5) / 1_000_000_000.0;
+            double durationAll = (endTime7 - startTime) / 1_000_000_000.0;
+            System.out.printf("Java (FFM API) insertId: %d, passed %.6f sec.%n", insertedId, durationIns);
+            System.out.printf("Java (FFM API) updateId: %d, passed %.6f sec.%n", insertedId, durationUpd);
+            System.out.printf("Java (FFM API) findId:   %d, passed %.6f sec.%n", insertedId, durationFin);
+            System.out.printf("Java (FFM API) removeId: %d, passed %.6f sec.%n", insertedId, durationDel);
+            System.out.printf("Java (FFM API)               passed %.6f sec.%n", durationAll);
         }
     }
 }
