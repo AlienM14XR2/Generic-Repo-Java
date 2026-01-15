@@ -156,6 +156,16 @@ public class PanamaTest {
                 )
         );
 
+        MethodHandle beginTxMysql = linker.downcallHandle(
+                lib.find("begin_tx_mysql").orElseThrow(),
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
+        );
+
+        MethodHandle commitTxMysql = linker.downcallHandle(
+                lib.find("commit_tx_mysql").orElseThrow(),
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS)
+        );
+
         try (Arena arena = Arena.ofConfined()) {
             // 2. C++ インスタンスの生成 (create_varnode("root"))
             MemorySegment rootKey = arena.allocateFrom("root");
@@ -188,6 +198,8 @@ public class PanamaTest {
             debugNode.invokeExact(nodePtr);
             System.out.println("--- C++ Debug Output End ---");
 
+            // Tx 開始
+            beginTxMysql.invokeExact(session);
             long endTime1 = System.nanoTime();
             // 5. Insert 実行
             long insertedId = (long) insertVarnodeMysql.invokeExact(
@@ -219,7 +231,7 @@ public class PanamaTest {
                     arena.allocateFrom("fulltype")
             );
             MemorySegment cstr = (MemorySegment)getCStr.invokeExact(findResult);
-            long resultSize = (long)cstrSize.invokeExact(cstr);
+            long resultSize = (long)cstrSize.invokeExact(findResult);
             System.out.println("resultSize: "+resultSize);
             MemorySegment sizedSegment = cstr.reinterpret(resultSize+1);
             System.out.println("sizedSegment: "+sizedSegment.getString(0L, StandardCharsets.UTF_8));
@@ -233,6 +245,8 @@ public class PanamaTest {
                     arena.allocateFrom("fulltype")
             );
             long endTime6 = System.nanoTime();
+            // tx コミット
+            commitTxMysql.invokeExact(session);
 
             // 9. 解放
             destroyString.invokeExact(findResult);
