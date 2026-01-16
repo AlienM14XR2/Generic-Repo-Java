@@ -11,14 +11,14 @@ import java.util.Arrays;
  * 「Foreign Function & Memory API (Project Panama)」の活用
  * Gradle 9 系は JDK 25 に対応していない。
  * mkdir -p out
- * javac -d out src/test/java/org/example/node/ffma/PanamaTest.java
+ javac -d out src/test/java/org/example/node/ffma/PanamaTest.java
  * # 実行
  * # --enable-native-access: FFM APIの使用を許可
  * # -Djava.library.path: .so が置かれているディレクトリを指定
- * java --enable-native-access=ALL-UNNAMED \
- *      -Djava.library.path=/home/jack/dev2/Paradise-Lost/C++/2025/generic_repo_cxx/build \
- *      -cp out \
- *      org.example.node.ffma.PanamaTest
+ java --enable-native-access=ALL-UNNAMED \
+  -Djava.library.path=/home/jack/dev2/Paradise-Lost/C++/2025/generic_repo_cxx/build \
+  -cp out \
+  org.example.node.ffma.PanamaTest
  *
  */
 public class PanamaTest {
@@ -212,12 +212,13 @@ public class PanamaTest {
             System.out.println("insertId: "+insertedId);
             // 6. Update 実行
             long endTime3 = System.nanoTime();
-            addChildStr.invokeExact(nodePtr, arena.allocateFrom("email"), arena.allocateFrom("derek_update@loki.org"));
-            addChildStr.invokeExact(nodePtr, arena.allocateFrom("memo"), arena.allocateFrom("football player, PG"));
-            addChildInt64t.invoke(nodePtr, arena.allocateFrom("age"), 33L);
+            MemorySegment nodePtr_u = (MemorySegment)createNode.invokeExact(rootKey);
+            addChildStr.invokeExact(nodePtr_u, arena.allocateFrom("email"), arena.allocateFrom("derek_update@loki.org"));
+            addChildStr.invokeExact(nodePtr_u, arena.allocateFrom("memo"), arena.allocateFrom("football player, PG"));
+            addChildInt64t.invoke(nodePtr_u, arena.allocateFrom("age"), 33L);
             updateVarnodeMysql.invokeExact(
                     session,
-                    nodePtr,
+                    nodePtr_u,
                     insertedId,
                     arena.allocateFrom("test"),
                     arena.allocateFrom("fulltype")
@@ -250,7 +251,8 @@ public class PanamaTest {
 
             // 9. 解放
             destroyString.invokeExact(findResult);
-            destroyNode.invokeExact(nodePtr);
+            // 現状、Inser やUpdate を正しく完了した際は、明示的な開放の必要がない（行うとむしろエラーになる）。
+//            destroyNode.invokeExact(nodePtr);
             destroySessionMySQL.invokeExact(session);
             long endTime7 = System.nanoTime();
             // 秒単位に変換して出力 (C++側の CLOCKS_PER_SEC と比較用)
